@@ -26,4 +26,5 @@ LABEL type="other"
 LABEL readme='https://raw.githubusercontent.com/carlaaronmiller/wsExt1/blob/main/README.md'
 LABEL links='{"source": "https://github.com/carlaaronmiller/wsExt1/"}'
 LABEL requirements="core >= 1.1"
-ENTRYPOINT cd /app && python -u main.py
+WORKDIR /app
+ENTRYPOINT ["python", "-u", "main.py"]
