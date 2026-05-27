@@ -1,6 +1,10 @@
 FROM python:3.11-slim
 COPY app /app
-RUN python -m pip install --verbose /app --extra-index-url https://www.piwheels.org/simple
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libi2c-dev && rm -rf /var/lib/apt/lists/*
+RUN python -m pip install /app --extra-index-url https://www.piwheels.org/simple \
+    --ignore-installed bluerobotics-navigator
+RUN python -m pip install bluerobotics-navigator==0.1.2 || true
 EXPOSE 9050/tcp
 LABEL version="0.0.3"
 LABEL permissions='\
