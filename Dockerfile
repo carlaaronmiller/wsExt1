@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 COPY app /app
-RUN python -m pip install /app --extra-index-url https://www.piwheels.org/simple
+RUN python -m pip install --verbose /app --extra-index-url https://www.piwheels.org/simple
 EXPOSE 9050/tcp
 LABEL version="0.0.3"
 LABEL permissions='\
