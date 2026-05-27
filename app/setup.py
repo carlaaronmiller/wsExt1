@@ -18,7 +18,6 @@ setup(
         "numpy==2.0.2",
         "fastapi==0.135.3",
         "requests==2.32.5",
-        "smbus2==0.6.1",
-        "fastapi-cors==0.1.0",
+        "smbus2==0.6.1"
     ],
 )
