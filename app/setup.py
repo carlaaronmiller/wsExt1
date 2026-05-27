@@ -14,7 +14,6 @@ setup(
     install_requires=[
         "pymavlink==2.4.49",
         "pyserial==3.5",
-        "bluerobotics-navigator==0.1.2",
         "uvicorn==0.39.0",
         "numpy==2.0.2",
         "fastapi==0.135.3",
