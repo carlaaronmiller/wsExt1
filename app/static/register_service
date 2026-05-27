@@ -1,8 +1,8 @@
 {
-    "name":"QuickStart",
-    "description":"Example Extension",
+    "name":"wsExt1",
+    "description":"WaterSampler backend.",
     "icon":"mdi-clock",
-    "company":"Blue Robotics",
+    "company":"Dalhousie",
     "version":"0.0.1",
     "webpage":"https://example.com",
     "api":""
