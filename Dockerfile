@@ -2,9 +2,8 @@ FROM python:3.11-slim
 COPY app /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libi2c-dev && rm -rf /var/lib/apt/lists/*
-RUN python -m pip install /app --extra-index-url https://www.piwheels.org/simple \
-    --ignore-installed bluerobotics-navigator
-RUN python -m pip install bluerobotics-navigator==0.1.2 || true
+RUN python -m pip install /app --extra-index-url https://www.piwheels.org/simple
+RUN python -m pip install bluerobotics-navigator==0.1.2 || echo "Navigator skipped (not on ARM)"
 EXPOSE 9050/tcp
 LABEL version="0.0.3"
 LABEL permissions='\
@@ -27,7 +26,7 @@ LABEL permissions='\
 LABEL authors='[{"name": "Carl Miller", "email": "carl.miller@dal.ca"}]'
 LABEL company='{"about": "Dalhousie University", "name": "CERCOcean", "email": "carl.miller@dal.ca"}'
 LABEL type="other"
-LABEL readme='https://raw.githubusercontent.com/carlaaronmiller/wsExt1/blob/main/README.md'
+LABEL readme='https://raw.githubusercontent.com/carlaaronmiller/wsExt1/main/README.md'
 LABEL links='{"source": "https://github.com/carlaaronmiller/wsExt1/"}'
 LABEL requirements="core >= 1.1"
 WORKDIR /app
