@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 COPY app /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libi2c-dev && rm -rf /var/lib/apt/lists/*
+    build-essential libi2c-dev libopenblas-dev && rm -rf /var/lib/apt/lists/*
 RUN python -m pip install /app --extra-index-url https://www.piwheels.org/simple
 RUN python -m pip install bluerobotics-navigator==0.1.2 || echo "Navigator skipped (not on ARM)"
 EXPOSE 9050/tcp
