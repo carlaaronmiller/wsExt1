@@ -289,14 +289,14 @@ async def sensor_data():
 # Register service for blueos sidebar access.
 @app.get("/register_service")
 async def register_service():
-    with open("/app/register_service", "r") as f:
+    with open("/app/static/register_service", "r") as f:
         return JSONResponse(content=json.load(f))
 
 
 # Serve index.html at root
 @app.get("/")
 async def root():
-    return FileResponse("/app/index.html")
+    return FileResponse("/app/static/index.html")
 
 
 async def aml_parsing_loop():
