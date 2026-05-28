@@ -5,6 +5,8 @@ import bluerobotics_navigator as navigator
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 import uvicorn
 import asyncio
@@ -283,6 +285,19 @@ async def sensor_data():
         "sal_calc": sal_psu,
         "aml": flat_aml,
     }
+
+# Register service for blueos sidebar access.
+@app.get("/register_service")
+async def register_service():
+    with open("/app/register_service", "r") as f:
+        return JSONResponse(content=json.load(f))
+
+
+# Serve index.html at root
+@app.get("/")
+async def root():
+    return FileResponse("/app/index.html")
+
 
 async def aml_parsing_loop():
     global text_backup, aml_values, sal_psu
