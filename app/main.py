@@ -314,6 +314,18 @@ async def sensor_data():
     }
 
 
+# Serve the register_service endpoint for BlueOS sidebar integration
+@app.get("/register_service")
+async def register_service():
+    with open("/app/register_service", "r") as f:
+        return JSONResponse(content=json.load(f))
+
+# Serve index.html at root
+@app.get("/")
+async def root():
+    return FileResponse("/app/index.html")
+
+
 async def aml_parsing_loop():
     global text_backup, aml_values, calc_sal_psu
     print("AML parsing loop started.")
