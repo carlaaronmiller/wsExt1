@@ -47,7 +47,7 @@ SEC_TO_MICROSEC = 1e6
 HPA_TO_PA = 100
 HPA_TO_BAR = 100
 MBAR_TO_BAR = 1000
-MINIMUM_SALT_WATER_COND = 0#30 # mS/cm
+MINIMUM_SALT_WATER_COND = 30 # mS/cm
 # -------------------------------CONNECTION SETUP-------------------------------
 MASTER_ADDRESS = "tcp:127.0.0.1:5777"
 BOOT_TIME = time.time()
@@ -371,7 +371,7 @@ async def aml_parsing_loop():
                         calc_sal_psu = (
                             NO_DATA_VAL
                             if ct_cond_mscm == SENSOR_ERROR_VAL or ct_temp_degc == SENSOR_ERROR_VAL or ct_cond_mscm < MINIMUM_SALT_WATER_COND
-                            else round(SP_from_C([ct_cond_mscm], [ct_temp_degc], [bar30_pressure_mbar * MBAR_TO_BAR])[0],3)+30
+                            else round(SP_from_C([ct_cond_mscm], [ct_temp_degc], [bar30_pressure_mbar * MBAR_TO_BAR])[0],3)
                         )
                         if time.time() - last_print >= AML_SENSOR_PRINT_PERIOD:
                             print(f"CT: {ct_cond_mscm}, {ct_temp_degc}, Sal(PSU): {calc_sal_psu}")
