@@ -19,85 +19,85 @@ import sys
 import ms5837
 import requests
 import traceback
-# -------------------------------MAV CMD PARAMS-------------------------------
-SENSOR_PWR_RELAY_CHANNEL = 6 # Zero indexed, physical port 7.
+
+BOOT_TIME = time.time()
+
+# -------------------------------HARDWARE PARAMS-------------------------------
 SAMPLE_TRIGGER_CHANNEL = 3 # Physical port 2 on Tealas Sampler, 3 on DAL WS.
 LUMEN_CHANNEL = 9 # PWM channel 10 for the lumen on Dal WS.
+
+AML_PWR_RELAY_CHANNEL = 6 # Zero indexed, physical port 7.
+RELAY_OFF = 0
 RELAY_MID = 0.25
 RELAY_ON = 1.0
-RELAY_OFF = 0
-PWM_LOW = 225  # PWM values not in microsecond, but as fraction of 4096 block to reach standard 1100, 1500, and 1900 periods.
-PWM_MID = 307
-PWM_HIGH = 389
+
+
 SERVO_PWM_FREQUENCY_HZ = 50
-MAVLINK_PAUSE_TIME_SECONDS = 1
-RELAY_PAUSE_TIME_SECONDS = 2
+PWM_LOW = 225  # PWM values not in microsecond, but as fraction of 4096 block to reach standard 1100, 1500, and 1900 periods.
+PWM_MID = 307  # E.g. value = 4095 * pulse_duration (1500 us for mid pwm) / cycle_PERIOD_SECONDS( 1/50 Hz) = 307
+PWM_HIGH = 389
 # -------------------------------AML LOOP PARAMS-------------------------------
-REFRESH_PERIOD_SECONDS = 1
-AML_SENSOR_PRINT_PERIOD = 1
 NO_DATA_VAL = -1
-SENSOR_ERROR_VAL = -2
+AML_ERROR_VAL = -2
 TEXT_BACKUP_HEADER = "Time (local), BAR30-Depth (m), BAR30-Temp (°C), AML Cond (mS/cm), AML Temp (°C), PSU (Calulated), AML Chloro (μg/L), AML Rho (ppb), AML Turb (NTU),  AML DO (μmol/L)\n"
 # -------------------------------PHYSICAL CONSTANTS-------------------------------
 STANDARD_ATMOSPHERIC_PRESSURE_HPA = 1013.25
-DEG_C_PER_DEG_CENTI_C = 0.01
-GRAV_ACC = 9.8
 SALTWATER_DENSITY_KGM3 = 1023.6
-SEC_TO_MICROSEC = 1e6
-HPA_TO_PA = 100
-HPA_TO_BAR = 100
-MBAR_TO_BAR = 1000
+MBAR_TO_DBAR = 0.01
 MINIMUM_SALT_WATER_COND = 30 # mS/cm
-# -------------------------------CONNECTION SETUP-------------------------------
-MASTER_ADDRESS = "tcp:127.0.0.1:5777"
-BOOT_TIME = time.time()
+# -------------------------------TIMING PARAMS-------------------------------
+AUTOPILOT_SHUTDOWN_SECONDS = 5
+
+AML_REFRESH_PERIOD_SECONDS = 1
+AML_PRINT_PERIOD_SECONDS= 1
+AML_REBOOT_TIME_SECONDS = (
+    10  # Healthy amount of time from power to actually streaming data.
+)
+AML_CMD_WAIT_TIME_SECONDS = 1  # Give sensors time to respond to the cmd.
+AML_RESPONSE_TIMEOUT_SECONDS = (
+    5  # If nothing after this amount of time, nothings coming.
+)
+
+BAR30_REFRESH_PERIOD_SECONDS = 0.25
+BAR30_PRINT_PERIOD_SECONDS= 1.0
+
+RELAY_PAUSE_TIME_SECONDS = 2
 # -------------------------------SENSOR COMM PARAMS-------------------------------
-SENSOR_DICT = {
+AML_SENSOR_DICT = {
     "CT.X2": None,
     "Chloro-blue": None,
     "Rhodamine": None,
     "Turbidity": None,
     "Dissolved Oxygen": None,
 }
-SENSOR_BAUD_RATE = 9600
-SENSOR_REBOOT_TIME_SECONDS = (
-    10  # Healthy amount of time from power to actually streaming data.
-)
-SENSOR_CMD_WAIT_TIME_SECONDS = 1  # Give sensors time to respond to the cmd.
-SENSOR_RESPONSE_TIMEOUT_SECONDS = (
-    5  # If nothing after this amount of time, nothings coming.
-)
+AML_BAUD_RATE = 9600
 MS5837_BUS = 6
-BAR30_REFRESH_PERIOD_SECONDS = 0.25
-DEPTH_SENSOR_PRINT_PERIOD = 1.0
-AUTOPILOT_SHUTDOWN_SECONDS = 5
-
 # -------------------------------FUNCTIONS-------------------------------
 def power_cycle_sensors():  # Power cycles the sensors on defined port to trip RC Switch to high.
     print("Powering off sensors.")
-    navigator.set_pwm_channel_value(SENSOR_PWR_RELAY_CHANNEL, PWM_LOW)
-    time.sleep(SENSOR_REBOOT_TIME_SECONDS)
+    navigator.set_pwm_channel_value(AML_PWR_RELAY_CHANNEL, PWM_LOW)
+    time.sleep(AML_REBOOT_TIME_SECONDS)
     print("Powering on sensors.")
-    navigator.set_pwm_channel_value(SENSOR_PWR_RELAY_CHANNEL, PWM_HIGH)
-    time.sleep(SENSOR_REBOOT_TIME_SECONDS)
+    navigator.set_pwm_channel_value(AML_PWR_RELAY_CHANNEL, PWM_HIGH)
+    time.sleep(AML_REBOOT_TIME_SECONDS)
 
 
 def discover_devices():
-    # Reset SENSOR_DICT before rediscovery so stale entries don't persist.
-    for key in SENSOR_DICT:
-        SENSOR_DICT[key] = None
+    # Reset AML_SENSOR_DICT before rediscovery so stale entries don't persist.
+    for key in AML_SENSOR_DICT:
+        AML_SENSOR_DICT[key] = None
 
     start_time = time.time()
 
-    while time.time() - start_time < SENSOR_RESPONSE_TIMEOUT_SECONDS:
+    while time.time() - start_time < AML_RESPONSE_TIMEOUT_SECONDS:
         usb_devices = glob.glob("/dev/ttyUSB*")
         if usb_devices:
             break
-        time.sleep(SENSOR_CMD_WAIT_TIME_SECONDS)
+        time.sleep(AML_CMD_WAIT_TIME_SECONDS)
 
     if not usb_devices:
         print(
-            f"No USB devices detected after {SENSOR_RESPONSE_TIMEOUT_SECONDS} seconds. Exiting."
+            f"No USB devices detected after {AML_RESPONSE_TIMEOUT_SECONDS} seconds. Exiting."
         )
         sys.exit(1)
 
@@ -105,24 +105,24 @@ def discover_devices():
         try:
             print(f"Probing {dev}...")
             ser = serial.Serial(
-                dev, SENSOR_BAUD_RATE, timeout=SENSOR_CMD_WAIT_TIME_SECONDS
+                dev, AML_BAUD_RATE, timeout=AML_CMD_WAIT_TIME_SECONDS
             )
-            time.sleep(SENSOR_CMD_WAIT_TIME_SECONDS)
+            time.sleep(AML_CMD_WAIT_TIME_SECONDS)
             ser.write(b"\r")
-            time.sleep(SENSOR_CMD_WAIT_TIME_SECONDS)
+            time.sleep(AML_CMD_WAIT_TIME_SECONDS)
             ser.write(b"display options\r")
             option_display_text = ""
             start_time = time.time()
             sensor_found = False
-            while time.time() - start_time < SENSOR_RESPONSE_TIMEOUT_SECONDS:
+            while time.time() - start_time < AML_RESPONSE_TIMEOUT_SECONDS:
                 line = ser.readline().decode("utf-8", errors="ignore").strip()
                 option_display_text += line
                 if not line:
                     continue
-                for s_name in SENSOR_DICT:
-                    if SENSOR_DICT[s_name] is None and s_name in line:
+                for s_name in AML_SENSOR_DICT:
+                    if AML_SENSOR_DICT[s_name] is None and s_name in line:
                         print(f"{s_name} found on <{dev}>.")
-                        SENSOR_DICT[s_name] = ser
+                        AML_SENSOR_DICT[s_name] = ser
                         sensor_found = True
 
                 if ">" in line:
@@ -142,7 +142,7 @@ def discover_devices():
 
     time.sleep(10)
     print("Breaking out of discover.")
-    return SENSOR_DICT
+    return AML_SENSOR_DICT
 
 
 def get_sensor_line(ser_num):
@@ -164,26 +164,26 @@ def get_sensor_line(ser_num):
 
 
 def get_ct_nums(sen):
-    sensor_line = get_sensor_line(SENSOR_DICT[sen])
+    sensor_line = get_sensor_line(AML_SENSOR_DICT[sen])
     # print(f"[CT DEBUG] raw line: {sensor_line!r}")  # debug print.
     split_line = sensor_line.split()
     if len(split_line) < 2:
         print(f"[CT DEBUG] too few fields ({len(split_line)}): {split_line}")
-        return [SENSOR_ERROR_VAL, SENSOR_ERROR_VAL]
+        return [AML_ERROR_VAL, AML_ERROR_VAL]
     try:
         return float(split_line[0]), round(float(split_line[1]), 2)
     except ValueError as e:
         print(f"[CT DEBUG] float conversion failed: {e} on {split_line}")
-        return [SENSOR_ERROR_VAL, SENSOR_ERROR_VAL]
+        return [AML_ERROR_VAL, AML_ERROR_VAL]
 
 
 def get_single_val(sen):
-    sensor_line = get_sensor_line(SENSOR_DICT[sen])
+    sensor_line = get_sensor_line(AML_SENSOR_DICT[sen])
     try:
         sensor_val = int(float(sensor_line))
     except ValueError:
         print(f"{sen} bad line -> {sensor_line!r}")
-        sensor_val = SENSOR_ERROR_VAL
+        sensor_val = AML_ERROR_VAL
     # print(f"[get_single_val DEBUG:] raw line: {sensor_val !r}")  # debug print.
     return sensor_val
 
@@ -238,7 +238,7 @@ async def depth_sensor_loop():
         SALTWATER_DENSITY_KGM3
     )  # Set density for seawater, if using freshwater comment out or change.
     bar30.init()
-    last_print = 0
+    last_print_time = 0
     if(bar30_zeroed == False and bar30.read()): #Grab offset on first run.
         bar30_depth_reading_m = round(bar30.depth(), 2)
         bar30_depth_m_offset = bar30_depth_reading_m if bar30_depth_reading_m < 0.5 else 0
@@ -248,16 +248,17 @@ async def depth_sensor_loop():
         print(f"BAR30 Depth Offset: {bar30_depth_m_offset:.2f} m")
         print(f"BAR30 Pressure Offset: {bar30_pressure_mbar_offset:.2f} mbar")
     while True:
-        if bar30.read():
+        try: 
+            bar30.read()
             bar30_depth_m = round(bar30.depth(), 2) - bar30_depth_m_offset
             bar30_temp_c = round(bar30.temperature(), 2)
             bar30_pressure_mbar = round(bar30.pressure(), 3) - bar30_pressure_mbar_offset
-            if time.time() - last_print >= DEPTH_SENSOR_PRINT_PERIOD:
-                print(f"Current Depth: {bar30_depth_m:.2f} m")
-                print(f"Current Temperature: {bar30_temp_c:.2f} °C")
-                last_print = time.time()
-        else:
-            print("Failed to read BAR30.")
+            if time.time() - last_print_time >= BAR30_PRINT_PERIOD_SECONDS:
+                print(f"Current Depth: {bar30_depth_m:.2f} m", flush = True)
+                print(f"Current Temperature: {bar30_temp_c:.2f} °C", flush = True)
+                last_print_time = time.time()
+        except Exception as e:
+            print(f"Failed to read BAR30: exception: {Exception}.", flush = True)
         await asyncio.sleep(BAR30_REFRESH_PERIOD_SECONDS)
 
 
@@ -340,14 +341,14 @@ async def aml_parsing_loop():
         print(f"Textbackup opening failed: {e}")
     print("Backup opened.")
     text_line = ""
-    last_print = 0
+    last_print_time = 0
     try:
         while True:
             try:
                 # If all sensors have gone None, USB likely disconnected — wait and rediscover.
                 if all(sen_dict[s] is None for s in sen_dict):
                     print("[AML] All sensors lost, waiting for USB reconnect...")
-                    await asyncio.sleep(SENSOR_REBOOT_TIME_SECONDS)
+                    await asyncio.sleep(AML_REBOOT_TIME_SECONDS)
                     sen_dict = discover_devices()
 
                 text_line = datetime.now().strftime("%H:%M:%S")
@@ -361,32 +362,33 @@ async def aml_parsing_loop():
                     elif sen == "CT.X2":
                         ct_cond_mscm, ct_temp_degc = get_ct_nums(sen)
                         # If CT read failed, mark disconnected to trigger rediscovery.
-                        if ct_cond_mscm == SENSOR_ERROR_VAL:
+                        if ct_cond_mscm == AML_ERROR_VAL:
                             print("[AML] CT.X2 read failed, marking as disconnected.")
-                            SENSOR_DICT[sen] = None
+                            AML_SENSOR_DICT[sen] = None
                             sen_dict[sen] = None
-                            text_line += f", {SENSOR_ERROR_VAL}"
+                            text_line += f", {AML_ERROR_VAL}"
                             continue
                         aml_values["CT.X2"] = {"ct_cond_mscm": ct_cond_mscm, "ct_temp_degc": ct_temp_degc}
                         calc_sal_psu = (
                             NO_DATA_VAL
-                            if ct_cond_mscm == SENSOR_ERROR_VAL or ct_temp_degc == SENSOR_ERROR_VAL or ct_cond_mscm < MINIMUM_SALT_WATER_COND
-                            else round(SP_from_C([ct_cond_mscm], [ct_temp_degc], [bar30_pressure_mbar * MBAR_TO_BAR])[0],3)
+                            if ct_cond_mscm == AML_ERROR_VAL or ct_temp_degc == AML_ERROR_VAL or ct_cond_mscm < MINIMUM_SALT_WATER_COND
+                            # SP_from_C( Conductivity(mS/cm), Temp (dgC), Pressure (dBar))
+                            else round(SP_from_C([ct_cond_mscm], [ct_temp_degc], [bar30_pressure_mbar * MBAR_TO_DBAR])[0],3)  
                         )
-                        if time.time() - last_print >= AML_SENSOR_PRINT_PERIOD:
-                            print(f"CT: {ct_cond_mscm}, {ct_temp_degc}, Sal(PSU): {calc_sal_psu}")
-                            last_print = time.time()
+                        if time.time() - last_print_time >= AML_PRINT_PERIOD_SECONDS:
+                            print(f"CT: {ct_cond_mscm}, {ct_temp_degc}, Sal(PSU): {calc_sal_psu}", flush = True)
+                            last_print_time = time.time()
                         text_line += f",{ct_cond_mscm},{ct_temp_degc},{calc_sal_psu}"
 
                     else:
                         s_val = get_single_val(sen)
-                        if s_val == SENSOR_ERROR_VAL:
+                        if s_val == AML_ERROR_VAL:
                             print(f"Error found in sensor line {sen}. Removing sensor.")
-                            SENSOR_DICT[sen] = None
+                            AML_SENSOR_DICT[sen] = None
                             sen_dict[sen] = None
                         elif s_val == NO_DATA_VAL:
                             print(f"No data received from {sen}. Removing sensor.")
-                            SENSOR_DICT[sen] = None
+                            AML_SENSOR_DICT[sen] = None
                             sen_dict[sen] = None
                         else:
                             aml_values[sen] = s_val
@@ -399,12 +401,12 @@ async def aml_parsing_loop():
                 print(f"[AML LOOP ERROR] {e}")
                 traceback.print_exc()
 
-            await asyncio.sleep(REFRESH_PERIOD_SECONDS)  # always runs, even after an error
+            await asyncio.sleep(AML_REFRESH_PERIOD_SECONDS)  # always runs, even after an error
 
     finally:
         if text_backup:
             text_backup.close()
-        for s in SENSOR_DICT.values():
+        for s in AML_SENSOR_DICT.values():
             if isinstance(s, serial.Serial) and s.is_open:
                 s.close()
 
@@ -420,7 +422,7 @@ async def start_async_functions():
     # Initial setup for navigator RC switch.
     navigator.init()
     navigator.set_pwm_freq_hz(SERVO_PWM_FREQUENCY_HZ)
-    navigator.set_pwm_channel_value(SENSOR_PWR_RELAY_CHANNEL, PWM_HIGH)
+    navigator.set_pwm_channel_value(AML_PWR_RELAY_CHANNEL, PWM_HIGH)
     navigator.set_pwm_channel_duty_cycle(SAMPLE_TRIGGER_CHANNEL, 1.0)
     navigator.set_pwm_enable(True)
 
