@@ -21,7 +21,6 @@ import requests
 import traceback
 
 BOOT_TIME = time.time()
-
 # -------------------------------HARDWARE PARAMS-------------------------------
 SAMPLE_TRIGGER_CHANNEL = 3 # Physical port 2 on Tealas Sampler, 3 on DAL WS.
 LUMEN_CHANNEL = 9 # PWM channel 10 for the lumen on Dal WS.
@@ -30,7 +29,6 @@ AML_PWR_RELAY_CHANNEL = 6 # Zero indexed, physical port 7.
 RELAY_OFF = 0
 RELAY_MID = 0.25
 RELAY_ON = 1.0
-
 
 SERVO_PWM_FREQUENCY_HZ = 50
 PWM_LOW = 225  # PWM values not in microsecond, but as fraction of 4096 block to reach standard 1100, 1500, and 1900 periods.
@@ -241,7 +239,7 @@ async def depth_sensor_loop():
     last_print_time = 0
     if(bar30_zeroed == False and bar30.read()): #Grab offset on first run.
         bar30_depth_reading_m = round(bar30.depth(), 2)
-        bar30_depth_m_offset = bar30_depth_reading_m if bar30_depth_reading_m < 0.5 else 0
+        bar30_depth_m_offset = bar30_depth_reading_m if bar30_depth_reading_m < 2.0 else 0
         bar30_pressure_reading_mbar = round(bar30.pressure(), 2)
         bar30_pressure_mbar_offset = bar30_pressure_reading_mbar if abs(bar30_pressure_reading_mbar - STANDARD_ATMOSPHERIC_PRESSURE_HPA) < 500 else 0
         bar30_zeroed = True
