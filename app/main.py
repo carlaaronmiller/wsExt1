@@ -434,7 +434,7 @@ async def aml_parsing_loop():
 async def start_async_functions():
     # Kill ardupilot on startup — we don't need it
     try:
-        r = requests.post("http://localhost/ardupilot-manager/v1.0/stop")
+        r = requests.post("http://192.168.2.2:8000/v2.0/stop")
         print(f"Stopped ardupilot: {r.status_code}")
     except Exception as e:
         print(f"Ardupilot stop failed (may already be stopped): {e}")
