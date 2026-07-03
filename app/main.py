@@ -59,6 +59,7 @@ AML_RESPONSE_TIMEOUT_SECONDS = (
 )
 
 BAR30_REFRESH_PERIOD_SECONDS = 0.25
+BAR30_REINIT_TIME_SECONDS = 5
 BAR30_PRINT_PERIOD_SECONDS= 1.0
 
 RELAY_PAUSE_TIME_SECONDS = 2
@@ -235,11 +236,20 @@ bar30_zeroed = False
 async def depth_sensor_loop():
     global bar30_depth_m, bar30_temp_c, bar30_pressure_mbar, bar30_zeroed
     print("Staring BAR loop.",flush = True)
-    bar30 = ms5837.MS5837_30BA(bus=MS5837_BUS)
-    bar30.setFluidDensity(
-        SALTWATER_DENSITY_KGM3
-    )  # Set density for seawater, if using freshwater comment out or change.
-    bar30.init()
+    bar30 = None
+    while bar30 is None:
+        try:
+            
+            b = ms5837.MS5837_30BA(bus=MS5837_BUS)
+            b.setFluidDensity(
+                SALTWATER_DENSITY_KGM3
+            )  # Set density for seawater, if using freshwater comment out or change.
+            b.init()
+            bar30 = b
+            print("BAR30 init successful.", flush = True)
+        except Exception as e:
+            print(f"BAR30 Init failed, retrying in 5s: {e}", flush =True)
+            await asincio.sleep(BAR30_REINIT_TIME_SECONDS)
     last_print_time = 0
     if(bar30_zeroed == False and bar30.read()): #Grab offset on first run.
         bar30_depth_reading_m = round(bar30.depth(), 2)
