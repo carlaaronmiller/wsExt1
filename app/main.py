@@ -46,7 +46,7 @@ SALTWATER_DENSITY_KGM3 = 1023.6
 MBAR_TO_DBAR = 0.01
 MINIMUM_SALT_WATER_COND = 30 # mS/cm
 # -------------------------------TIMING PARAMS-------------------------------
-AUTOPILOT_SHUTDOWN_SECONDS = 5
+AUTOPILOT_SHUTDOWN_SECONDS = 10
 
 AML_REFRESH_PERIOD_SECONDS = 1
 AML_PRINT_PERIOD_SECONDS= 1
@@ -428,7 +428,7 @@ async def start_async_functions():
         print(f"Stopped ardupilot: {r.status_code}")
     except Exception as e:
         print(f"Ardupilot stop failed (may already be stopped): {e}")
-    await asyncio.sleep(AUTOPILOT_SHUTDOWN_SECONDS)
+    await asyncio.sleep(AUTOPILOT_SHUTDOWN_SECONDS) #Todo: keep checking if autopilot is shut down before proceding.
     # Initial setup for navigator RC switch.
     navigator.init()
     navigator.set_pwm_freq_hz(SERVO_PWM_FREQUENCY_HZ)
