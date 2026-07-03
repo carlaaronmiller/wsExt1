@@ -249,7 +249,7 @@ async def depth_sensor_loop():
             print("BAR30 init successful.", flush = True)
         except Exception as e:
             print(f"BAR30 Init failed, retrying in 5s: {e}", flush =True)
-            await asincio.sleep(BAR30_REINIT_TIME_SECONDS)
+            await asyncio.sleep(BAR30_REINIT_TIME_SECONDS)
     last_print_time = 0
     if(bar30_zeroed == False and bar30.read()): #Grab offset on first run.
         bar30_depth_reading_m = round(bar30.depth(), 2)
